@@ -10,24 +10,24 @@ class ColoredFormatter(logging.Formatter):
 
     # ANSI color codes
     COLORS = {
-        'DEBUG': '\033[36m',      # Cyan
-        'INFO': '\033[32m',       # Green
-        'WARNING': '\033[33m',    # Yellow
-        'ERROR': '\033[31m',      # Red
-        'CRITICAL': '\033[35m',   # Magenta
-        'RESET': '\033[0m',       # Reset
-        'GRAY': '\033[90m',       # Gray for date/time
-        'BLUE': '\033[34m',       # Blue for time
-        'CYAN': '\033[96m',       # Light cyan for module name
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
+        "RESET": "\033[0m",  # Reset
+        "GRAY": "\033[90m",  # Gray for date/time
+        "BLUE": "\033[34m",  # Blue for time
+        "CYAN": "\033[96m",  # Light cyan for module name
     }
 
     # Emoji mappings
     EMOJIS = {
-        'DEBUG': '🔍',
-        'INFO': 'ℹ️',
-        'WARNING': '⚠️',
-        'ERROR': '❌',
-        'CRITICAL': '🔥'
+        "DEBUG": "🔍",
+        "INFO": "ℹ️",
+        "WARNING": "⚠️",
+        "ERROR": "❌",
+        "CRITICAL": "🔥",
     }
 
     def format(self, record: logging.LogRecord) -> str:
@@ -41,18 +41,18 @@ class ColoredFormatter(logging.Formatter):
             Formatted log string with colors
         """
         # Get colors
-        level_color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
-        reset = self.COLORS['RESET']
-        gray = self.COLORS['GRAY']
-        blue = self.COLORS['BLUE']
-        cyan = self.COLORS['CYAN']
+        level_color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
+        reset = self.COLORS["RESET"]
+        gray = self.COLORS["GRAY"]
+        blue = self.COLORS["BLUE"]
+        cyan = self.COLORS["CYAN"]
 
         # Get emoji
-        emoji = self.EMOJIS.get(record.levelname, '')
+        emoji = self.EMOJIS.get(record.levelname, "")
 
         # Format timestamp components
         timestamp = self.formatTime(record, self.datefmt)
-        date_part, time_part = timestamp.split(' ')
+        date_part, time_part = timestamp.split(" ")
 
         # Build colored output
         formatted_msg = (
@@ -80,11 +80,11 @@ def _get_log_level(level: str) -> int:
         ValueError: If invalid log level provided
     """
     level_mapping = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
     }
 
     level_upper = level.upper()
@@ -98,9 +98,7 @@ def _get_log_level(level: str) -> int:
 
 
 def setup_logger(
-    name: str,
-    level: str = 'INFO',
-    log_file: Optional[str] = None
+    name: str, level: str = "INFO", log_file: Optional[str] = None
 ) -> logging.Logger:
     """
     Set up a logger with colored console output and optional file output.
@@ -129,8 +127,8 @@ def setup_logger(
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
     console_formatter = ColoredFormatter(
-        fmt='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
@@ -140,8 +138,8 @@ def setup_logger(
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(log_level)
         file_formatter = logging.Formatter(
-            fmt='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
@@ -149,7 +147,7 @@ def setup_logger(
     return logger
 
 
-def get_logger(name: str, level: str = 'INFO') -> logging.Logger:
+def get_logger(name: str, level: str = "INFO") -> logging.Logger:
     """
     Get or create a logger instance.
 
