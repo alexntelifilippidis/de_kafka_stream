@@ -1,0 +1,7 @@
+[project]
+name = "app"
+version = "0.1.0"
+description = "Data engineering pipeline using Apache Kafka for real-time data streaming"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
