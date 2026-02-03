@@ -137,15 +137,27 @@ make help          # View all commands
 - UV package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - Docker or Podman
 
+### Configuration
+```bash
+# Copy .env.example to .env and configure
+cp .env.example .env
+
+# Edit .env with your settings
+# LOG_LEVEL: DEBUG, INFO, WARNING, ERROR, CRITICAL
+```
+
 ### Common Commands
 ```bash
 # Setup
 make init          # Initialize project
 make add PKG=name  # Add dependency
+make add-env PKG=name ENV=doris  # Add dependency to specific environment
 
 # Development
 make dev           # Start development environment
-make run           # Run application
+make run           # Run application (default)
+make run ENV=doris      # Run with Doris dependencies
+make run ENV=starproject # Run with StarProject dependencies
 make test          # Run tests
 make format        # Format code
 
@@ -164,14 +176,17 @@ make clean-all     # Deep clean
 ## 📁 Project Structure
 ```
 de_kafka_stream/
+├── .env.example            # Environment variables template
+├── .gitignore              # Git ignore rules
 ├── Makefile                # Task automation
 ├── pyproject.toml          # UV configuration
 ├── uv.lock                 # Dependency lock file
 ├── app/
 │   ├── main.py
-│   ├── kafka_producer/
-│   ├── kafka_consumer/     # (to be added)
-│   └── processors/         # (to be added)
+│   ├── kafka/
+│   │   └── kafka_client/
+│   └── utils/
+│       └── logger.py
 └── tests/                  # (to be added)
 ```
 

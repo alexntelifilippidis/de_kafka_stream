@@ -9,27 +9,32 @@ help:
 	@echo "🚀 Kafka Stream Project - Available Commands"
 	@echo ""
 	@echo "Setup & Installation:"
-	@echo "  make init          - Initialize project (install UV if needed, sync dependencies)"
-	@echo "  make install       - Install/sync all dependencies with UV"
-	@echo "  make sync          - Sync dependencies from lock file"
-	@echo "  make update        - Update dependencies and lock file"
+	@echo "  make init                        - Initialize project (install UV if needed, sync dependencies)"
+	@echo "  make install                     - Install/sync all dependencies with UV"
+	@echo "  make sync                        - Sync dependencies from lock file"
+	@echo "  make update                      - Update dependencies and lock file"
+	@echo "  make add PKG=name                - Add a dependency"
+	@echo "  make add-dev PKG=name            - Add a dev dependency"
+	@echo "  make add-env PKG=name ENV=doris  - Add dependency to environment group"
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev           - Start development environment (Kafka + app)"
-	@echo "  make run           - Run the application"
-	@echo "  make test          - Run tests"
-	@echo "  make lint          - Run linting checks"
-	@echo "  make format        - Format code"
+	@echo "  make dev                         - Start development environment (Kafka + app)"
+	@echo "  make run                         - Run the application (default: development)"
+	@echo "  make run ENV=doris               - Run with Doris dependencies"
+	@echo "  make run ENV=starproject         - Run with StarProject dependencies"
+	@echo "  make test                        - Run tests"
+	@echo "  make lint                        - Run linting checks"
+	@echo "  make format                      - Format code"
 	@echo ""
 	@echo "Docker/Kafka:"
-	@echo "  make docker-up     - Start Kafka cluster"
-	@echo "  make docker-down   - Stop Kafka cluster"
-	@echo "  make docker-logs   - View Kafka logs"
-	@echo "  make docker-clean  - Stop and remove all containers/volumes"
+	@echo "  make docker-up                   - Start Kafka cluster"
+	@echo "  make docker-down                 - Stop Kafka cluster"
+	@echo "  make docker-logs                 - View Kafka logs"
+	@echo "  make docker-clean                - Stop and remove all containers/volumes"
 	@echo ""
 	@echo "Cleanup:"
-	@echo "  make clean         - Clean up cache files and temp directories"
-	@echo "  make clean-all     - Deep clean (cache + venv + docker)"
+	@echo "  make clean                       - Clean up cache files and temp directories"
+	@echo "  make clean-all                   - Deep clean (cache + venv + docker)"
 
 # Initialize project - first time setup
 init:
@@ -72,10 +77,31 @@ add-dev:
 	@echo "➕ Adding $(PKG) as dev dependency..."
 	uv add --dev $(PKG)
 
-# Run the application
+# Add dependency to specific environment group (use: make add-env PKG=package-name ENV=doris)
+add-env:
+	@if [ -z "$(PKG)" ]; then \
+		echo "❌ Please specify package: make add-env PKG=package-name ENV=doris"; \
+		exit 1; \
+	fi
+	@if [ -z "$(ENV)" ]; then \
+		echo "❌ Please specify environment: make add-env PKG=package-name ENV=doris"; \
+		exit 1; \
+	fi
+	@echo "➕ Adding $(PKG) to $(ENV) dependency group..."
+	uv add --group $(ENV) $(PKG)
+
+# Run the application (use: make run ENV=doris or ENV=starproject)
 run:
 	@echo "▶️  Running application..."
-	uv run python app/main.py
+	@if [ -n "$(ENV)" ]; then \
+		echo "🌍 Environment: $(ENV)"; \
+		echo "📦 Syncing dependencies for $(ENV)..."; \
+		uv sync --group $(ENV); \
+		ENV=$(ENV) uv run python -m app.main; \
+	else \
+		echo "🌍 Environment: development (default)"; \
+		uv run python -m app.main; \
+	fi
 
 # Start development environment
 dev: docker-up

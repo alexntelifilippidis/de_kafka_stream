@@ -4,4 +4,45 @@ version = "0.1.0"
 description = "Data engineering pipeline using Apache Kafka for real-time data streaming"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "python-dotenv>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
+]
+
+doris = [
+    # Add Doris-specific dependencies here
+    # e.g., "pymysql>=1.0.0",
+]
+
+starproject = [
+    # Add StarProject-specific dependencies here
+    # e.g., "pystarprojct>=1.0.0",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
