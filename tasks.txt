@@ -1,0 +1,2 @@
+2 uv envs 1 doris 2 starproject
+create a producer
