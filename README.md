@@ -29,7 +29,7 @@ This is a Proof of Concept (POC) project focused on building a data engineering 
   - [ ] Create tests/ directory
   - [x] Add configuration files
 - [x] Document requirements and dependencies
-- [ ] Create docker-compose.yml for Kafka cluster
+- [x] Create docker-compose.yml for Kafka cluster
 
 **Deliverable:** Working local Kafka cluster and project structure
 
@@ -37,11 +37,11 @@ This is a Proof of Concept (POC) project focused on building a data engineering 
 
 ### Week 2: Kafka Producer Implementation
 - [ ] Design data schema for streaming events
-- [ ] Implement Kafka producer
-  - [ ] Configure producer settings (acks, retries, etc.)
+- [x] Implement Kafka producer
+  - [x] Configure producer settings (acks, retries, etc.)
   - [ ] Add serialization logic (JSON/Avro)
-  - [ ] Implement error handling and logging
-- [ ] Create sample data generator
+  - [x] Implement error handling and logging
+- [x] Create sample data generator
 - [ ] Write unit tests for producer
 - [ ] Add monitoring and metrics
 
