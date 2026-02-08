@@ -5,6 +5,7 @@ description = "Data engineering pipeline using Apache Kafka for real-time data s
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "kafka-python>=2.0.2",
     "python-dotenv>=1.2.1",
 ]
 
