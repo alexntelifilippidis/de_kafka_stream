@@ -1,4 +1,4 @@
-.PHONY: help install sync update clean test lint format produce run docker-up docker-down docker-logs init dev
+.PHONY: help install sync update clean test lint format produce consume run docker-up docker-down docker-logs init dev
 
 # Detect container runtime (prefer docker, fallback to podman)
 CONTAINER_RUNTIME := $(shell command -v docker 2>/dev/null || command -v podman 2>/dev/null)
@@ -24,6 +24,11 @@ help:
 	@echo "  make produce ENV=starproject     - Run producer with StarProject dependencies"
 	@echo "  make produce NUM_MESSAGES=10     - Send 10 random employee messages"
 	@echo "  make produce NUM_MESSAGES=100    - Send 100 random employee messages"
+	@echo "  make consume                     - Run Kafka consumer (default: development)"
+	@echo "  make consume ENV=doris           - Run consumer with Doris dependencies"
+	@echo "  make consume ENV=starproject     - Run consumer with StarProject dependencies"
+	@echo "  make consume MAX_MESSAGES=10     - Consume up to 10 messages then stop"
+	@echo "  make consume GROUP=my-group      - Consume with custom consumer group"
 	@echo "  make test                        - Run tests"
 	@echo "  make lint                        - Run linting checks"
 	@echo "  make format                      - Format code"
@@ -117,6 +122,35 @@ produce:
 
 # Alias for backward compatibility
 run: produce
+
+# Run Kafka consumer (use: make consume ENV=doris MAX_MESSAGES=10 GROUP=my-group)
+consume:
+	@echo "📥 Starting Kafka Consumer..."
+	@if [ -n "$(ENV)" ]; then \
+		echo "🌍 Environment: $(ENV)"; \
+		echo "📦 Syncing dependencies for $(ENV)..."; \
+		uv sync --group $(ENV); \
+		if [ -n "$(MAX_MESSAGES)" ]; then \
+			echo "📊 Max messages: $(MAX_MESSAGES)"; \
+		fi; \
+		if [ -n "$(GROUP)" ]; then \
+			echo "👥 Consumer group: $(GROUP)"; \
+			KAFKA_CONSUMER_GROUP_ID=$(GROUP) MAX_MESSAGES=$(MAX_MESSAGES) ENV=$(ENV) uv run python -m app.consumer; \
+		else \
+			MAX_MESSAGES=$(MAX_MESSAGES) ENV=$(ENV) uv run python -m app.consumer; \
+		fi \
+	else \
+		echo "🌍 Environment: development (default)"; \
+		if [ -n "$(MAX_MESSAGES)" ]; then \
+			echo "📊 Max messages: $(MAX_MESSAGES)"; \
+		fi; \
+		if [ -n "$(GROUP)" ]; then \
+			echo "👥 Consumer group: $(GROUP)"; \
+			KAFKA_CONSUMER_GROUP_ID=$(GROUP) MAX_MESSAGES=$(MAX_MESSAGES) uv run python -m app.consumer; \
+		else \
+			MAX_MESSAGES=$(MAX_MESSAGES) uv run python -m app.consumer; \
+		fi \
+	fi
 
 # Start development environment
 dev: docker-up
