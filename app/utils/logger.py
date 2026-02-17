@@ -90,16 +90,13 @@ def _get_log_level(level: str) -> int:
     level_upper = level.upper()
     if level_upper not in level_mapping:
         raise ValueError(
-            f"Invalid log level: {level}. "
-            f"Must be one of: {', '.join(level_mapping.keys())}"
+            f"Invalid log level: {level}. Must be one of: {', '.join(level_mapping.keys())}"
         )
 
     return level_mapping[level_upper]
 
 
-def setup_logger(
-    name: str, level: str = "INFO", log_file: Optional[str] = None
-) -> logging.Logger:
+def setup_logger(name: str, level: str = "INFO", log_file: Optional[str] = None) -> logging.Logger:
     """
     Set up a logger with colored console output and optional file output.
 

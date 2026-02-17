@@ -1,8 +1,8 @@
+import json
 import os
 
-from kafka import KafkaProducer
-import json
 from app.utils.logger import get_logger
+from kafka import KafkaProducer
 
 
 class KafkaClient:
@@ -16,10 +16,13 @@ class KafkaClient:
         self.producer = KafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
             client_id=self.client_id,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-            key_serializer=lambda k: k.encode('utf-8') if k else None
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+            key_serializer=lambda k: k.encode("utf-8") if k else None,
         )
-        self.logger.info(f"Kafka producer initialized with bootstrap servers: {self.bootstrap_servers}, client_id: {self.client_id}")
+        self.logger.info(
+            f"Kafka producer initialized with bootstrap servers: "
+            f"{self.bootstrap_servers}, client_id: {self.client_id}"
+        )
 
     def send_message(self, topic, message, key=None):
         """Send a message to the specified Kafka topic."""
