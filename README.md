@@ -50,15 +50,15 @@ This is a Proof of Concept (POC) project focused on building a data engineering 
 ---
 
 ### Week 3: Kafka Consumer Implementation
-- [ ] Implement Kafka consumer
-  - [ ] Configure consumer group and offset management
-  - [ ] Add deserialization logic
-  - [ ] Implement message processing logic
-- [ ] Set up consumer error handling
-  - [ ] Dead letter queue setup
-  - [ ] Retry mechanisms
-- [ ] Write unit tests for consumer
-- [ ] Add consumer monitoring
+- [x] Implement Kafka consumer
+  - [x] Configure consumer group and offset management
+  - [x] Add deserialization logic
+  - [x] Implement message processing logic
+- [x] Set up consumer error handling
+  - [x] Retry mechanisms
+  - [x] Error logging
+- [x] Write unit tests for consumer
+- [x] Add consumer monitoring
 
 **Deliverable:** Working end-to-end producer-consumer flow
 
@@ -159,6 +159,11 @@ make produce       # Run Kafka producer (default)
 make produce ENV=doris      # Run producer with Doris dependencies
 make produce ENV=starproject # Run producer with StarProject dependencies
 make produce NUM_MESSAGES=10  # Send 10 random employee messages
+make consume       # Run Kafka consumer (default)
+make consume ENV=doris      # Run consumer with Doris dependencies
+make consume ENV=starproject # Run consumer with StarProject dependencies
+make consume MAX_MESSAGES=10  # Consume up to 10 messages then stop
+make consume GROUP=my-group   # Consume with custom consumer group
 make test          # Run tests
 make format        # Format code
 
@@ -184,11 +189,17 @@ de_kafka_stream/
 ├── uv.lock                 # Dependency lock file
 ├── app/
 │   ├── producer.py         # Kafka message producer
+│   ├── consumer.py         # Kafka message consumer
 │   ├── kafka/
-│   │   └── kafka_client/
+│   │   ├── __init__.py
+│   │   └── kafka_client.py # Kafka client wrapper (producer & consumer)
 │   └── utils/
-│       └── logger.py
-└── tests/                  # (to be added)
+│       ├── __init__.py
+│       └── logger.py       # Colored logging utility
+└── tests/
+    ├── __init__.py
+    ├── test_producer.py
+    └── test_consumer.py    # Consumer unit tests
 ```
 
 ---
