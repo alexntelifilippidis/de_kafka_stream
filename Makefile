@@ -1,4 +1,4 @@
-.PHONY: help install sync update clean test lint format run docker-up docker-down docker-logs init dev
+.PHONY: help install sync update clean test lint format produce run docker-up docker-down docker-logs init dev
 
 # Detect container runtime (prefer docker, fallback to podman)
 CONTAINER_RUNTIME := $(shell command -v docker 2>/dev/null || command -v podman 2>/dev/null)
@@ -19,9 +19,11 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev                         - Start development environment (Kafka + app)"
-	@echo "  make run                         - Run the application (default: development)"
-	@echo "  make run ENV=doris               - Run with Doris dependencies"
-	@echo "  make run ENV=starproject         - Run with StarProject dependencies"
+	@echo "  make produce                     - Run Kafka producer (default: development)"
+	@echo "  make produce ENV=doris           - Run producer with Doris dependencies"
+	@echo "  make produce ENV=starproject     - Run producer with StarProject dependencies"
+	@echo "  make produce NUM_MESSAGES=10     - Send 10 random employee messages"
+	@echo "  make produce NUM_MESSAGES=100    - Send 100 random employee messages"
 	@echo "  make test                        - Run tests"
 	@echo "  make lint                        - Run linting checks"
 	@echo "  make format                      - Format code"
@@ -90,24 +92,37 @@ add-env:
 	@echo "➕ Adding $(PKG) to $(ENV) dependency group..."
 	uv add --group $(ENV) $(PKG)
 
-# Run the application (use: make run ENV=doris or ENV=starproject)
-run:
-	@echo "▶️  Running application..."
+# Run Kafka producer (use: make produce ENV=doris NUM_MESSAGES=10)
+produce:
+	@echo "📤 Starting Kafka Producer..."
 	@if [ -n "$(ENV)" ]; then \
 		echo "🌍 Environment: $(ENV)"; \
 		echo "📦 Syncing dependencies for $(ENV)..."; \
 		uv sync --group $(ENV); \
-		ENV=$(ENV) uv run python -m app.main; \
+		if [ -n "$(NUM_MESSAGES)" ]; then \
+			echo "📊 Number of messages: $(NUM_MESSAGES)"; \
+			NUM_MESSAGES=$(NUM_MESSAGES) ENV=$(ENV) uv run python -m app.producer; \
+		else \
+			ENV=$(ENV) uv run python -m app.producer; \
+		fi \
 	else \
 		echo "🌍 Environment: development (default)"; \
-		uv run python -m app.main; \
+		if [ -n "$(NUM_MESSAGES)" ]; then \
+			echo "📊 Number of messages: $(NUM_MESSAGES)"; \
+			NUM_MESSAGES=$(NUM_MESSAGES) uv run python -m app.producer; \
+		else \
+			uv run python -m app.producer; \
+		fi \
 	fi
+
+# Alias for backward compatibility
+run: produce
 
 # Start development environment
 dev: docker-up
 	@echo "🔥 Starting development environment..."
 	@sleep 3
-	@make run
+	@make produce
 
 # Run tests
 test:

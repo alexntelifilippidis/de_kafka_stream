@@ -155,9 +155,10 @@ make add-env PKG=name ENV=doris  # Add dependency to specific environment
 
 # Development
 make dev           # Start development environment
-make run           # Run application (default)
-make run ENV=doris      # Run with Doris dependencies
-make run ENV=starproject # Run with StarProject dependencies
+make produce       # Run Kafka producer (default)
+make produce ENV=doris      # Run producer with Doris dependencies
+make produce ENV=starproject # Run producer with StarProject dependencies
+make produce NUM_MESSAGES=10  # Send 10 random employee messages
 make test          # Run tests
 make format        # Format code
 
@@ -182,7 +183,7 @@ de_kafka_stream/
 ├── pyproject.toml          # UV configuration
 ├── uv.lock                 # Dependency lock file
 ├── app/
-│   ├── main.py
+│   ├── producer.py         # Kafka message producer
 │   ├── kafka/
 │   │   └── kafka_client/
 │   └── utils/
