@@ -12,21 +12,22 @@ help:
 	@echo "  make init                        - Initialize project (install UV if needed, sync dependencies)"
 	@echo "  make install                     - Install/sync all dependencies with UV"
 	@echo "  make sync                        - Sync dependencies from lock file"
+	@echo "  make sync-dev                    - Sync dev dependencies"
+	@echo "  make sync-risingwave             - Sync RisingWave dependencies"
+	@echo "  make sync-all                    - Sync all dependency groups"
 	@echo "  make update                      - Update dependencies and lock file"
 	@echo "  make add PKG=name                - Add a dependency"
 	@echo "  make add-dev PKG=name            - Add a dev dependency"
-	@echo "  make add-env PKG=name ENV=doris  - Add dependency to environment group"
+	@echo "  make add-env PKG=name ENV=risingwave  - Add dependency to environment group"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev                         - Start development environment (Kafka + app)"
 	@echo "  make produce                     - Run Kafka producer (default: development)"
-	@echo "  make produce ENV=doris           - Run producer with Doris dependencies"
-	@echo "  make produce ENV=starproject     - Run producer with StarProject dependencies"
+	@echo "  make produce ENV=risingwave      - Run producer with RisingWave dependencies"
 	@echo "  make produce NUM_MESSAGES=10     - Send 10 random employee messages"
 	@echo "  make produce NUM_MESSAGES=100    - Send 100 random employee messages"
 	@echo "  make consume                     - Run Kafka consumer (default: development)"
-	@echo "  make consume ENV=doris           - Run consumer with Doris dependencies"
-	@echo "  make consume ENV=starproject     - Run consumer with StarProject dependencies"
+	@echo "  make consume ENV=risingwave      - Run consumer with RisingWave dependencies"
 	@echo "  make consume MAX_MESSAGES=10     - Consume up to 10 messages then stop"
 	@echo "  make consume GROUP=my-group      - Consume with custom consumer group"
 	@echo "  make test                        - Run tests"
@@ -38,6 +39,10 @@ help:
 	@echo "  make docker-down                 - Stop Kafka cluster"
 	@echo "  make docker-logs                 - View Kafka logs"
 	@echo "  make docker-clean                - Stop and remove all containers/volumes"
+	@echo ""
+	@echo "Web UIs (after make docker-up):"
+	@echo "  Kafka UI:           http://localhost:8080"
+	@echo "  RisingWave Console: http://localhost:8020"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean                       - Clean up cache files and temp directories"
@@ -59,6 +64,19 @@ install:
 sync:
 	@echo "🔄 Syncing dependencies from lock file..."
 	uv sync
+
+# Sync specific dependency groups
+sync-dev:
+	@echo "🔄 Syncing dev dependencies..."
+	uv sync --group dev
+
+sync-risingwave:
+	@echo "🔄 Syncing RisingWave dependencies..."
+	uv sync --group risingwave
+
+sync-all:
+	@echo "🔄 Syncing all dependency groups..."
+	uv sync --group dev --group risingwave
 
 # Update dependencies
 update:
@@ -84,20 +102,20 @@ add-dev:
 	@echo "➕ Adding $(PKG) as dev dependency..."
 	uv add --dev $(PKG)
 
-# Add dependency to specific environment group (use: make add-env PKG=package-name ENV=doris)
+# Add dependency to specific environment group (use: make add-env PKG=package-name ENV=risingwave)
 add-env:
 	@if [ -z "$(PKG)" ]; then \
-		echo "❌ Please specify package: make add-env PKG=package-name ENV=doris"; \
+		echo "❌ Please specify package: make add-env PKG=package-name ENV=risingwave"; \
 		exit 1; \
 	fi
 	@if [ -z "$(ENV)" ]; then \
-		echo "❌ Please specify environment: make add-env PKG=package-name ENV=doris"; \
+		echo "❌ Please specify environment: make add-env PKG=package-name ENV=risingwave"; \
 		exit 1; \
 	fi
 	@echo "➕ Adding $(PKG) to $(ENV) dependency group..."
 	uv add --group $(ENV) $(PKG)
 
-# Run Kafka producer (use: make produce ENV=doris NUM_MESSAGES=10)
+# Run Kafka producer (use: make produce ENV=risingwave NUM_MESSAGES=10)
 produce:
 	@echo "📤 Starting Kafka Producer..."
 	@if [ -n "$(ENV)" ]; then \
@@ -123,7 +141,7 @@ produce:
 # Alias for backward compatibility
 run: produce
 
-# Run Kafka consumer (use: make consume ENV=doris MAX_MESSAGES=10 GROUP=my-group)
+# Run Kafka consumer (use: make consume ENV=risingwave MAX_MESSAGES=10 GROUP=my-group)
 consume:
 	@echo "📥 Starting Kafka Consumer..."
 	@if [ -n "$(ENV)" ]; then \

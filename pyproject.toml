@@ -16,14 +16,11 @@ dev = [
     "ruff>=0.14.14",
 ]
 
-doris = [
-    # Add Doris-specific dependencies here
-    # e.g., "pymysql>=1.0.0",
-]
-
-starproject = [
-    # Add StarProject-specific dependencies here
-    # e.g., "pystarprojct>=1.0.0",
+risingwave = [
+    "risingwave-py>=0.0.2",
+    "psycopg2-binary>=2.9.9",
+    "sqlalchemy>=2.0.0",
+    "psycopg>=3.1.0",
 ]
 
 [tool.mypy]

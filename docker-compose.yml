@@ -25,3 +25,35 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
       - kafka
+
+  risingwave:
+    image: risingwavelabs/risingwave:latest
+    container_name: risingwave
+    pull_policy: always
+    ports:
+      - "4566:4566"
+      - "5691:5691"
+    command: single_node
+    environment:
+      - RUST_BACKTRACE=1
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    shm_size: 1g
+    depends_on:
+      - kafka
+
+  risingwave-ui:
+    image: risingwavelabs/risingwave-console:v0.5.2-pgbundle
+    container_name: risingwave-ui
+    ports:
+      - "8020:8020"
+    environment:
+      - RW_DB_URL=postgres://root:@risingwave:4566/dev
+      - RCONSOLE_ROOT_PASSWORD=your_secure_password
+    depends_on:
+      - risingwave
+
