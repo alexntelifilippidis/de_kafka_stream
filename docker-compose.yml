@@ -14,6 +14,7 @@ services:
       - KAFKA_KRAFT_CLUSTER_ID=abcdefghijklmnopqrstuv
     ports:
       - "29092:29092"
+    restart: always
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -25,26 +26,29 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
       - kafka
+    restart: always
 
   risingwave:
     image: risingwavelabs/risingwave:latest
     container_name: risingwave
-    pull_policy: always
+    command: single_node
     ports:
       - "4566:4566"
       - "5691:5691"
-    command: single_node
+    volumes:
+      - risingwave-data:/root/.risingwave
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g
     environment:
       - RUST_BACKTRACE=1
+      - RISINGWAVE_COMPACTION_WORKER_THREADS_NUMBER=2
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 6G
         reservations:
           memory: 2G
     shm_size: 1g
-    depends_on:
-      - kafka
 
   risingwave-ui:
     image: risingwavelabs/risingwave-console:v0.5.2-pgbundle
@@ -53,7 +57,10 @@ services:
       - "8020:8020"
     environment:
       - RW_DB_URL=postgres://root:@risingwave:4566/dev
-      - RCONSOLE_ROOT_PASSWORD=your_secure_password
+      - RCONSOLE_ROOT_PASSWORD=admin
     depends_on:
       - risingwave
+
+volumes:
+  risingwave-data:
 

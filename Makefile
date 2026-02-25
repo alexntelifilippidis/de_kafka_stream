@@ -39,6 +39,7 @@ help:
 	@echo "  make docker-down                 - Stop Kafka cluster"
 	@echo "  make docker-logs                 - View Kafka logs"
 	@echo "  make docker-clean                - Stop and remove all containers/volumes"
+	@echo "  make risingwave-reset            - Reset RisingWave with clean state (fixes corruption)"
 	@echo ""
 	@echo "Web UIs (after make docker-up):"
 	@echo "  Kafka UI:           http://localhost:8080"
@@ -231,6 +232,24 @@ docker-clean:
 		exit 1; \
 	fi
 	$(COMPOSE_CMD) down -v --remove-orphans
+
+# Reset RisingWave with clean state
+risingwave-reset:
+	@echo "🔄 Resetting RisingWave with clean state..."
+	@if [ -z "$(CONTAINER_RUNTIME)" ]; then \
+		echo "❌ Neither docker nor podman found."; \
+		exit 1; \
+	fi
+	@echo "Stopping services..."
+	$(COMPOSE_CMD) down
+	@echo "Removing RisingWave volume..."
+	$(CONTAINER_RUNTIME) volume rm de_kafka_stream_risingwave-data 2>/dev/null || true
+	@echo "Starting services..."
+	$(COMPOSE_CMD) up -d
+	@echo "⏳ Waiting 20 seconds for RisingWave to initialize..."
+	@sleep 20
+	@echo "✅ RisingWave reset complete!"
+	@echo "Check status with: make docker-logs"
 
 # Clean cache and temporary files
 clean:
