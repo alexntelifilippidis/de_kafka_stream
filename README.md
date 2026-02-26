@@ -179,6 +179,64 @@ make clean-all     # Deep clean
 
 ---
 
+## 🔧 Troubleshooting
+
+### RisingWave Issues
+
+#### Connection Refused / Container Keeps Restarting
+If you see errors like "connection refused" or "Streaming vnode mapping not found", RisingWave's internal state may be corrupted:
+
+```bash
+# Option 1: Use the make command
+make risingwave-reset
+
+# Option 2: Manual cleanup
+docker compose down -v
+docker volume rm de_kafka_stream_risingwave-data
+docker compose up -d
+```
+
+#### RisingWave Crashes or OOM (Out of Memory)
+If RisingWave keeps crashing, you may need to:
+1. Increase Docker's memory limit (Docker Desktop > Settings > Resources)
+2. Adjust memory settings in `docker-compose.yml`:
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         memory: 8G  # Increase if you have more RAM
+   ```
+
+#### Checking RisingWave Logs
+```bash
+# View latest logs
+docker logs risingwave --tail 50
+
+# Follow logs in real-time
+docker logs -f risingwave
+
+# Check if server is ready
+docker logs risingwave 2>&1 | grep "server started"
+```
+
+#### Testing Connection
+```bash
+# Test from inside the container
+docker exec risingwave psql -h localhost -p 4566 -U root -d dev -c "SELECT 1;"
+
+# Test from host
+psql -h localhost -p 4566 -U root -d dev -c "SELECT 1;"
+```
+
+### Kafka Issues
+
+#### Cannot Connect to Kafka
+Make sure you're using the correct port:
+- Internal (from other containers): `kafka:9092`
+- External (from host): `localhost:29092`
+
+---
+
 ## 📁 Project Structure
 ```
 de_kafka_stream/
@@ -190,6 +248,7 @@ de_kafka_stream/
 ├── app/
 │   ├── producer.py         # Kafka message producer
 │   ├── consumer.py         # Kafka message consumer
+│   ├── rising_wave.py      # RisingWave connection example
 │   ├── kafka/
 │   │   ├── __init__.py
 │   │   └── kafka_client.py # Kafka client wrapper (producer & consumer)
@@ -209,8 +268,9 @@ de_kafka_stream/
 - Weekly tasks are flexible and adjustable
 - Use `make help` to see all available commands
 - Docker/Podman auto-detected for container operations
+- RisingWave requires at least 4GB RAM for stable operation
 
 ---
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 25, 2026
 
