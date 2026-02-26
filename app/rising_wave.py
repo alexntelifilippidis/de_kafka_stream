@@ -55,6 +55,13 @@ def create_kafka_streaming_table():
     ) FORMAT PLAIN ENCODE JSON;
     """
 
+    create_mv_sql = """
+    CREATE MATERIALIZED VIEW IF NOT EXISTS employees_live AS
+    SELECT *
+    FROM employees
+    ORDER BY timestamp DESC;
+    """
+
     try:
         rw = get_risingwave_client()
         with rw.getconn() as conn:
@@ -62,6 +69,8 @@ def create_kafka_streaming_table():
             logger.debug(f"Using Kafka bootstrap servers: {internal_kafka_servers}")
             conn.execute(create_table_sql)
             logger.info("✅ Streaming table 'employees' created successfully")
+            conn.execute(create_mv_sql)
+            logger.info("✅ Materialized view 'employees_live' created successfully")
             logger.info("Note: Give RisingWave a moment to start consuming from Kafka")
 
     except Exception as e:
@@ -70,15 +79,13 @@ def create_kafka_streaming_table():
 
 
 def query_streaming_table(limit=10):
-    """Query the streaming table to see the data."""
+    """Query the materialized view to see the latest streaming data."""
     try:
         rw = get_risingwave_client()
         with rw.getconn() as conn:
-            query = f"SELECT * FROM employees ORDER BY timestamp DESC LIMIT {limit};"
-            logger.info(f"Querying employees table (limit: {limit})")
-            result = conn.execute(query)
-
-            results = result.fetchall()
+            query = f"SELECT * FROM employees_live LIMIT {limit};"
+            logger.info(f"Querying employees_live materialized view (limit: {limit})")
+            results = conn.fetch(query)
 
             if results:
                 logger.info(f"Found {len(results)} records:")
@@ -95,10 +102,14 @@ def query_streaming_table(limit=10):
 
 
 def drop_streaming_table():
-    """Drop the streaming table (useful for cleanup/reset)."""
+    """Drop the materialized view and streaming table (useful for cleanup/reset)."""
     try:
         rw = get_risingwave_client()
         with rw.getconn() as conn:
+            logger.info("Dropping materialized view 'employees_live'")
+            conn.execute("DROP MATERIALIZED VIEW IF EXISTS employees_live;")
+            logger.info("✅ Materialized view 'employees_live' dropped successfully")
+
             logger.info("Dropping streaming table 'employees'")
             conn.execute("DROP TABLE IF EXISTS employees;")
             logger.info("✅ Streaming table 'employees' dropped successfully")
@@ -113,6 +124,9 @@ def main():
     logger.info("🚀 Starting RisingWave streaming table setup...")
 
     try:
+        # Optional: Drop the table if it already exists (for a clean slate)
+        # drop_streaming_table()
+
         # Create the streaming table
         create_kafka_streaming_table()
 

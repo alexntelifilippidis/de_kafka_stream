@@ -197,6 +197,19 @@ services:
       retries: 5
     restart: always
 
+  # risingwave console for monitoring and managing RisingWave
+  risingwave-console:
+    image: risingwavelabs/risingwave-console:v0.5.2-pgbundle
+    container_name: risingwave-ui
+    ports:
+      - "8020:8020"
+    environment:
+      - RW_DB_URL=postgres://root:@risingwave-standalone:4566/dev
+      - RW_META_ADDR=http://risingwave-standalone:5690
+      - RW_DASHBOARD_URL=http://risingwave-standalone:5691
+      - RCONSOLE_ROOT_PASSWORD=admin
+    depends_on:
+      - risingwave-standalone
 volumes:
   postgres-0:
     external: false
@@ -206,4 +219,5 @@ volumes:
     external: false
   message_queue:
     external: false
+
 

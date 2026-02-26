@@ -45,6 +45,13 @@ help:
 	@echo "  Kafka UI:           http://localhost:8080"
 	@echo "  RisingWave Console: http://localhost:8020"
 	@echo ""
+	@echo "RisingWave Table:"
+	@echo "  make rw-create-table             - Create the employees streaming table"
+	@echo "  make rw-query-table              - Query the employees table"
+	@echo "  make rw-drop-table               - Drop the employees table"
+	@echo "  make rw-delete-data              - Delete all records from employees table"
+	@echo "  make rw-delete-data ID=<id>      - Delete a specific employee record by ID"
+	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean                       - Clean up cache files and temp directories"
 	@echo "  make clean-all                   - Deep clean (cache + venv + docker)"
@@ -232,6 +239,30 @@ docker-clean:
 		exit 1; \
 	fi
 	$(COMPOSE_CMD) down -v --remove-orphans
+
+# RisingWave table management
+rw-create-table:
+	@echo "📋 Creating RisingWave employees streaming table..."
+	uv run --group risingwave python -c "from app.rising_wave import create_kafka_streaming_table; create_kafka_streaming_table()"
+
+rw-query-table:
+	@echo "🔍 Querying RisingWave employees table..."
+	uv run --group risingwave python -c "from app.rising_wave import query_streaming_table; query_streaming_table(limit=20)"
+
+rw-drop-table:
+	@echo "🗑️  Dropping RisingWave employees table..."
+	uv run --group risingwave python -c "from app.rising_wave import drop_streaming_table; drop_streaming_table()"
+	@echo "✅ Table dropped!"
+
+rw-delete-data:
+	@echo "🧹 Deleting data from RisingWave employees table..."
+	@if [ -n "$(ID)" ]; then \
+		echo "Deleting employee with ID: $(ID)"; \
+		uv run --group risingwave python -c "from app.rising_wave import delete_table_data; delete_table_data('$(ID)')"; \
+	else \
+		echo "Deleting ALL records from employees table"; \
+		uv run --group risingwave python -c "from app.rising_wave import delete_table_data; delete_table_data()"; \
+	fi
 
 # Reset RisingWave with clean state
 risingwave-reset:
