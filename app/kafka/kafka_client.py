@@ -24,10 +24,10 @@ class KafkaClient:
             f"{self.bootstrap_servers}, client_id: {self.client_id}"
         )
 
-    def send_message(self, topic, message, key=None):
+    def send_message(self, topic, message, key=None, partition=None):
         """Send a message to the specified Kafka topic."""
         self.logger.debug(f"Sending message to topic '{topic}' with key '{key}'")
-        future = self.producer.send(topic, value=message, key=key)
+        future = self.producer.send(topic, value=message, key=key, partition=partition)
 
         try:
             record_metadata = future.get(timeout=10)

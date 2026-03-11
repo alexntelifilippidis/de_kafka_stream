@@ -26,6 +26,11 @@ help:
 	@echo "  make produce ENV=risingwave      - Run producer with RisingWave dependencies"
 	@echo "  make produce NUM_MESSAGES=10     - Send 10 random employee messages"
 	@echo "  make produce NUM_MESSAGES=100    - Send 100 random employee messages"
+	@echo "  make produce PARTITION=0         - Send all messages to partition 0"
+	@echo "  make produce PARTITION=1         - Send all messages to partition 1"
+	@echo "  make produce PARTITION=2         - Send all messages to partition 2"
+	@echo "  make produce PARTITION=-1        - Send messages to random partitions (default)"
+	@echo "  make produce NUM_PARTITIONS=3    - Number of partitions in the topic (default: 3)"
 	@echo "  make consume                     - Run Kafka consumer (default: development)"
 	@echo "  make consume ENV=risingwave      - Run consumer with RisingWave dependencies"
 	@echo "  make consume MAX_MESSAGES=10     - Consume up to 10 messages then stop"
@@ -123,27 +128,17 @@ add-env:
 	@echo "➕ Adding $(PKG) to $(ENV) dependency group..."
 	uv add --group $(ENV) $(PKG)
 
-# Run Kafka producer (use: make produce ENV=risingwave NUM_MESSAGES=10)
+# Run Kafka producer (use: make produce ENV=risingwave NUM_MESSAGES=10 PARTITION=0)
 produce:
 	@echo "📤 Starting Kafka Producer..."
 	@if [ -n "$(ENV)" ]; then \
 		echo "🌍 Environment: $(ENV)"; \
 		echo "📦 Syncing dependencies for $(ENV)..."; \
 		uv sync --group $(ENV); \
-		if [ -n "$(NUM_MESSAGES)" ]; then \
-			echo "📊 Number of messages: $(NUM_MESSAGES)"; \
-			NUM_MESSAGES=$(NUM_MESSAGES) ENV=$(ENV) uv run python -m app.producer; \
-		else \
-			ENV=$(ENV) uv run python -m app.producer; \
-		fi \
+		NUM_MESSAGES=$(NUM_MESSAGES) PARTITION=$(or $(PARTITION),-1) NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) ENV=$(ENV) uv run python -m app.producer; \
 	else \
 		echo "🌍 Environment: development (default)"; \
-		if [ -n "$(NUM_MESSAGES)" ]; then \
-			echo "📊 Number of messages: $(NUM_MESSAGES)"; \
-			NUM_MESSAGES=$(NUM_MESSAGES) uv run python -m app.producer; \
-		else \
-			uv run python -m app.producer; \
-		fi \
+		NUM_MESSAGES=$(NUM_MESSAGES) PARTITION=$(or $(PARTITION),-1) NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) uv run python -m app.producer; \
 	fi
 
 # Alias for backward compatibility

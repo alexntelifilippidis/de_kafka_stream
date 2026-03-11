@@ -17,6 +17,45 @@ services:
       - "29092:29092"
     restart: always
 
+  # Create Kafka topics with partitions on startup
+  kafka-init:
+    image: bitnamilegacy/kafka
+    container_name: kafka-init
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "⏳ Waiting for Kafka to be ready..."
+        sleep 10
+
+        create_or_alter() {
+          TOPIC=$1
+          PARTITIONS=$2
+          echo "📦 Creating topic '$TOPIC' with $PARTITIONS partitions..."
+          kafka-topics.sh --create \
+            --if-not-exists \
+            --bootstrap-server kafka:9092 \
+            --topic "$TOPIC" \
+            --partitions "$PARTITIONS" \
+            --replication-factor 1
+          # If topic already existed with fewer partitions, alter it
+          CURRENT=$(kafka-topics.sh --describe --bootstrap-server kafka:9092 --topic "$TOPIC" | grep "PartitionCount" | awk '{print $4}' | tr -d ',')
+          if [ -n "$CURRENT" ] && [ "$CURRENT" -lt "$PARTITIONS" ]; then
+            echo "⚙️  Altering '$TOPIC' from $CURRENT → $PARTITIONS partitions..."
+            kafka-topics.sh --alter \
+              --bootstrap-server kafka:9092 \
+              --topic "$TOPIC" \
+              --partitions "$PARTITIONS"
+          fi
+          echo "✅ Topic '$TOPIC' ready"
+          kafka-topics.sh --describe --bootstrap-server kafka:9092 --topic "$TOPIC"
+        }
+
+        create_or_alter codehub 3
+        create_or_alter employees 3
+    restart: "no"
+
   # Original Kafka UI (kept as-is)
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
