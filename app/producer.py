@@ -15,7 +15,7 @@ load_dotenv()
 logger = get_logger(name=__name__, level=os.getenv("LOG_LEVEL", "INFO"))
 
 
-def generate_random_employee_message(employee_number: int) -> dict:
+def generate_random_employee_message(employee_number: int, partition: int) -> dict:
     """Generate a random employee message with varying attributes."""
 
     # Random data pools
@@ -67,7 +67,7 @@ def generate_random_employee_message(employee_number: int) -> dict:
     ]
 
     # Generate random employee data
-    employee_id = f"EMP-{datetime.now().year}-{str(employee_number).zfill(3)}"
+    employee_id = f"EMP-{datetime.now().year}-{str(partition).zfill(3)}"
     name = random.choice(names)
     seniority = random.choice(seniorities)
     domain = random.choice(domains)
@@ -109,7 +109,6 @@ def resolve_partition(partition_env: str, num_partitions: int, message_index: in
 def get_topic_partition_count(bootstrap_servers: list[str], topic: str) -> int:
     """Fetch the real partition count for a topic directly from the Kafka broker."""
     from kafka import KafkaAdminClient
-    from kafka.admin import NewTopic  # noqa: F401 – just ensuring import is ok
 
     try:
         admin = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
@@ -156,9 +155,8 @@ def main():
 
         # Send multiple messages
         for i in range(1, num_messages + 1):
-            test_message = generate_random_employee_message(i)
-
             partition = resolve_partition(partition_env, num_partitions, i)
+            test_message = generate_random_employee_message(employee_number=i, partition=partition)
 
             logger.info(f"📤 Sending message {i}/{num_messages} to topic '{topic}' → partition {partition}")
             logger.debug(f"Message content: {test_message}")
