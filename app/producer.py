@@ -141,6 +141,19 @@ def main():
         num_partitions = broker_partition_count if broker_partition_count else int(os.getenv("NUM_PARTITIONS", "3"))
         logger.info(f"📡 Topic '{topic}' has {num_partitions} partition(s)")
 
+        # ── Skewed-key / hot-partition mode ────────────────────────────────────
+        # SKEW_RATIO=80  → 80% of messages use the HOT_KEY (default: EMP-HOT-000)
+        # so they all land on the same partition, creating visible imbalance and
+        # forcing a consumer rebalance scenario.
+        skew_ratio = int(os.getenv("SKEW_RATIO", "0"))   # 0-100 percent
+        hot_key = os.getenv("HOT_KEY", "EMP-HOT-000")    # key that always maps to same partition
+        if skew_ratio > 0:
+            logger.info(
+                f"🔥 Skewed-key mode ON  →  {skew_ratio}% of messages will use hot key '{hot_key}' "
+                f"(fills one partition more than others)"
+            )
+        # ───────────────────────────────────────────────────────────────────────
+
         fixed_partition = int(partition_env)
         if fixed_partition < 0:
             logger.info(
@@ -158,11 +171,23 @@ def main():
             partition = resolve_partition(partition_env, num_partitions, i)
             test_message = generate_random_employee_message(employee_number=i, partition=partition)
 
-            logger.info(f"📤 Sending message {i}/{num_messages} to topic '{topic}' → partition {partition}")
+            # Apply skewed-key logic: route SKEW_RATIO % of messages through the hot key.
+            # kafka-python hashes the key with Murmur2, so the same key always lands on
+            # the same partition → one partition fills up much faster than the others.
+            use_hot_key = skew_ratio > 0 and random.randint(1, 100) <= skew_ratio
+            message_key = hot_key if use_hot_key else test_message["employee_id"]
+            if use_hot_key:
+                test_message["employee_id"] = hot_key   # reflect in payload too
+                logger.debug(f"🔥 Hot-key message: key='{hot_key}'")
+
+            logger.info(
+                f"📤 Sending message {i}/{num_messages} to topic '{topic}' "
+                f"→ partition {partition}  key='{message_key}'"
+            )
             logger.debug(f"Message content: {test_message}")
 
             record_metadata = kafka_client.send_message(
-                topic=topic, message=test_message, key=test_message["employee_id"], partition=partition
+                topic=topic, message=test_message, key=message_key, partition=partition
             )
 
             logger.info(

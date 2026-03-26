@@ -1,4 +1,4 @@
-.PHONY: help install sync update clean test lint format produce consume run docker-up docker-down docker-logs init dev
+.PHONY: help install sync update clean test lint format produce consume consume-batch run docker-up docker-down docker-logs init dev kafka-alter-partitions
 
 # Detect container runtime (prefer docker, fallback to podman)
 CONTAINER_RUNTIME := $(shell command -v docker 2>/dev/null || command -v podman 2>/dev/null)
@@ -31,10 +31,16 @@ help:
 	@echo "  make produce PARTITION=2         - Send all messages to partition 2"
 	@echo "  make produce PARTITION=-1        - Send messages to random partitions (default)"
 	@echo "  make produce NUM_PARTITIONS=3    - Number of partitions in the topic (default: 3)"
+	@echo "  make produce SKEW_RATIO=80          - 80% of messages use HOT_KEY (fills one partition)"
+	@echo "  make produce SKEW_RATIO=90 HOT_KEY=EMP-HOT-999 NUM_MESSAGES=30  - custom hot key"
 	@echo "  make consume                     - Run Kafka consumer (default: development)"
 	@echo "  make consume ENV=risingwave      - Run consumer with RisingWave dependencies"
 	@echo "  make consume MAX_MESSAGES=10     - Consume up to 10 messages then stop"
 	@echo "  make consume GROUP=my-group      - Consume with custom consumer group"
+	@echo "  make consume-batch               - Run consumer in BATCH mode (poll-based)"
+	@echo "  make consume-batch BATCH_SIZE=50 - Batch of up to 50 records per poll"
+	@echo "  make consume-batch BATCH_TIMEOUT_MS=5000 - Wait 5 s per poll"
+	@echo "  make consume-batch MAX_BATCHES=3 - Stop after 3 non-empty batches"
 	@echo "  make test                        - Run tests"
 	@echo "  make lint                        - Run linting checks"
 	@echo "  make format                      - Format code"
@@ -45,6 +51,7 @@ help:
 	@echo "  make docker-logs                 - View Kafka logs"
 	@echo "  make docker-clean                - Stop and remove all containers/volumes"
 	@echo "  make risingwave-reset            - Reset RisingWave with clean state (fixes corruption)"
+	@echo "  make kafka-alter-partitions TOPIC=codehub NUM_PARTITIONS=6  - Increase partitions → forces consumer rebalance"
 	@echo ""
 	@echo "Web UIs (after make docker-up):"
 	@echo "  Kafka UI:           http://localhost:8080"
@@ -128,21 +135,98 @@ add-env:
 	@echo "➕ Adding $(PKG) to $(ENV) dependency group..."
 	uv add --group $(ENV) $(PKG)
 
-# Run Kafka producer (use: make produce ENV=risingwave NUM_MESSAGES=10 PARTITION=0)
+# Run Kafka producer (use: make produce ENV=risingwave NUM_MESSAGES=10 PARTITION=0 SKEW_RATIO=80)
 produce:
 	@echo "📤 Starting Kafka Producer..."
 	@if [ -n "$(ENV)" ]; then \
 		echo "🌍 Environment: $(ENV)"; \
 		echo "📦 Syncing dependencies for $(ENV)..."; \
 		uv sync --group $(ENV); \
-		NUM_MESSAGES=$(NUM_MESSAGES) PARTITION=$(or $(PARTITION),-1) NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) ENV=$(ENV) uv run python -m app.producer; \
+		NUM_MESSAGES=$(NUM_MESSAGES) \
+		PARTITION=$(or $(PARTITION),-1) \
+		NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) \
+		SKEW_RATIO=$(or $(SKEW_RATIO),0) \
+		HOT_KEY=$(or $(HOT_KEY),EMP-HOT-000) \
+		ENV=$(ENV) uv run python -m app.producer; \
 	else \
 		echo "🌍 Environment: development (default)"; \
-		NUM_MESSAGES=$(NUM_MESSAGES) PARTITION=$(or $(PARTITION),-1) NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) uv run python -m app.producer; \
+		NUM_MESSAGES=$(NUM_MESSAGES) \
+		PARTITION=$(or $(PARTITION),-1) \
+		NUM_PARTITIONS=$(or $(NUM_PARTITIONS),3) \
+		SKEW_RATIO=$(or $(SKEW_RATIO),0) \
+		HOT_KEY=$(or $(HOT_KEY),EMP-HOT-000) \
+		uv run python -m app.producer; \
 	fi
 
 # Alias for backward compatibility
 run: produce
+
+# Run Kafka consumer in BATCH mode
+# Usage: make consume-batch [BATCH_SIZE=100] [BATCH_TIMEOUT_MS=3000] [MAX_BATCHES=5] [GROUP=my-group] [ENV=dev]
+consume-batch:
+	@echo "📦 Starting Kafka Consumer in BATCH mode..."
+	@if [ -n "$(ENV)" ]; then \
+		echo "🌍 Environment: $(ENV)"; \
+		echo "📦 Syncing dependencies for $(ENV)..."; \
+		uv sync --group $(ENV); \
+		if [ -n "$(GROUP)" ]; then \
+			BATCH_MODE=true \
+			BATCH_SIZE=$(or $(BATCH_SIZE),100) \
+			BATCH_TIMEOUT_MS=$(or $(BATCH_TIMEOUT_MS),3000) \
+			MAX_BATCHES=$(MAX_BATCHES) \
+			KAFKA_CONSUMER_GROUP_ID=$(GROUP) \
+			ENV=$(ENV) uv run python -m app.consumer; \
+		else \
+			BATCH_MODE=true \
+			BATCH_SIZE=$(or $(BATCH_SIZE),100) \
+			BATCH_TIMEOUT_MS=$(or $(BATCH_TIMEOUT_MS),3000) \
+			MAX_BATCHES=$(MAX_BATCHES) \
+			ENV=$(ENV) uv run python -m app.consumer; \
+		fi \
+	else \
+		echo "🌍 Environment: development (default)"; \
+		if [ -n "$(GROUP)" ]; then \
+			BATCH_MODE=true \
+			BATCH_SIZE=$(or $(BATCH_SIZE),100) \
+			BATCH_TIMEOUT_MS=$(or $(BATCH_TIMEOUT_MS),3000) \
+			MAX_BATCHES=$(MAX_BATCHES) \
+			KAFKA_CONSUMER_GROUP_ID=$(GROUP) \
+			uv run python -m app.consumer; \
+		else \
+			BATCH_MODE=true \
+			BATCH_SIZE=$(or $(BATCH_SIZE),100) \
+			BATCH_TIMEOUT_MS=$(or $(BATCH_TIMEOUT_MS),3000) \
+			MAX_BATCHES=$(MAX_BATCHES) \
+			uv run python -m app.consumer; \
+		fi \
+	fi
+
+# ── Increase topic partitions at runtime → forces consumer group rebalance ──
+# NOTE: Kafka only allows INCREASING the partition count, never decreasing.
+# After this runs, every consumer in the group will trigger a rebalance and
+# re-assign partitions on the next poll.
+# Usage: make kafka-alter-partitions TOPIC=codehub NUM_PARTITIONS=6
+kafka-alter-partitions:
+	@if [ -z "$(TOPIC)" ]; then \
+		echo "❌ Please specify TOPIC=<name>  e.g. make kafka-alter-partitions TOPIC=codehub NUM_PARTITIONS=6"; \
+		exit 1; \
+	fi
+	@if [ -z "$(NUM_PARTITIONS)" ]; then \
+		echo "❌ Please specify NUM_PARTITIONS=<n>  e.g. make kafka-alter-partitions TOPIC=codehub NUM_PARTITIONS=6"; \
+		exit 1; \
+	fi
+	@echo "⚙️  Altering topic '$(TOPIC)' → $(NUM_PARTITIONS) partition(s)..."
+	@echo "   (consumers in the group will rebalance on next poll)"
+	$(CONTAINER_RUNTIME) exec kafka kafka-topics.sh \
+		--alter \
+		--bootstrap-server localhost:9092 \
+		--topic $(TOPIC) \
+		--partitions $(NUM_PARTITIONS)
+	@echo "✅ Done! Describe result:"
+	$(CONTAINER_RUNTIME) exec kafka kafka-topics.sh \
+		--describe \
+		--bootstrap-server localhost:9092 \
+		--topic $(TOPIC)
 
 # Run Kafka consumer (use: make consume ENV=risingwave MAX_MESSAGES=10 GROUP=my-group)
 consume:
