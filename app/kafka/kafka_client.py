@@ -24,10 +24,10 @@ class KafkaClient:
             f"{self.bootstrap_servers}, client_id: {self.client_id}"
         )
 
-    def send_message(self, topic, message, key=None):
+    def send_message(self, topic, message, key=None, partition=None):
         """Send a message to the specified Kafka topic."""
         self.logger.debug(f"Sending message to topic '{topic}' with key '{key}'")
-        future = self.producer.send(topic, value=message, key=key)
+        future = self.producer.send(topic, value=message, key=key, partition=partition)
 
         try:
             record_metadata = future.get(timeout=10)
@@ -114,6 +114,70 @@ class KafkaConsumerClient:
             self.logger.info("Consumer interrupted by user")
         finally:
             self.logger.info(f"Total messages consumed: {messages_consumed}")
+
+    def consume_messages_batch(self, max_records=500, timeout_ms=3000, max_batches=None):
+        """
+        Consume messages in **batches** using consumer.poll().
+
+        Each poll call returns up to `max_records` messages grouped by TopicPartition.
+        This is far more efficient than single-message iteration when throughput matters.
+
+        Args:
+            max_records  : Max messages returned in a single poll call (default 500).
+            timeout_ms   : How long to wait for messages before returning an empty batch (ms).
+            max_batches  : Stop after this many non-empty poll rounds (None = unlimited).
+
+        Yields:
+            (batch_number: int, batch: dict[TopicPartition, list[ConsumerRecord]])
+            — one yield per non-empty poll round.
+        """
+        if self.consumer is None:
+            raise RuntimeError("Consumer not initialized. Call subscribe() first.")
+
+        self.logger.info(
+            f"🚀 Starting BATCH consumption  "
+            f"(max_records/batch={max_records}, timeout_ms={timeout_ms}, "
+            f"max_batches={max_batches or 'unlimited'})"
+        )
+        batch_count = 0
+        total_messages = 0
+
+        try:
+            while True:
+                # poll() → {TopicPartition: [ConsumerRecord, ...]}
+                raw_batch = self.consumer.poll(timeout_ms=timeout_ms, max_records=max_records)
+
+                if not raw_batch:
+                    self.logger.debug("⏳ Empty poll — no messages yet, waiting…")
+                    continue
+
+                batch_count += 1
+                batch_size = sum(len(msgs) for msgs in raw_batch.values())
+                total_messages += batch_size
+
+                self.logger.info(
+                    f"📦 Batch #{batch_count}: {batch_size} message(s) "
+                    f"across {len(raw_batch)} partition(s)"
+                )
+                for tp, msgs in raw_batch.items():
+                    self.logger.debug(
+                        f"   └─ {tp.topic}[{tp.partition}]: {len(msgs)} msg(s)  "
+                        f"offsets {msgs[0].offset}–{msgs[-1].offset}"
+                    )
+
+                yield batch_count, raw_batch
+
+                if max_batches and batch_count >= max_batches:
+                    self.logger.info(f"Reached max_batches limit: {max_batches}")
+                    break
+
+        except KeyboardInterrupt:
+            self.logger.info("Batch consumer interrupted by user")
+        finally:
+            self.logger.info(
+                f"✅ Batch consumption finished — "
+                f"batches={batch_count}, total_messages={total_messages}"
+            )
 
     def close(self):
         """Close the consumer connection."""
